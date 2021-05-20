@@ -81,17 +81,36 @@ pub struct Track {
 }
 
 impl Track {
-    fn new(checkpoints: Vec<CheckPoint>, laps: i32, checkpoint_count: usize) {
+    fn new(checkpoints: Vec<CheckPoint>, laps: i32, checkpoint_count: usize) -> Track {
         Track {
-            checkpoints,
-            laps,
-            checkpoint_count
+            checkpoints: checkpoints,
+            laps: laps,
+            checkpoint_count: checkpoint_count
         }
     }
 
+    fn equal(point1: CheckPoint, point2: CheckPoint) -> bool {
+        if (point1.x == point2.x && point1.y == point2.y) {
+            return true;
+        }
+        return false;
+    }
 
-    fn pointById(&mut self, checkpoint_id: i32) -> CheckPoint {
+    fn pointById(&mut self, checkpoint_id: usize) -> CheckPoint {
         self.checkpoints[checkpoint_id]
+    }
+
+    fn lapByPoint(&mut self, checkpoint: CheckPoint) {
+        let point_position = self.checkpoints.into_iter().position(
+                |x: CheckPoint| Track::equal(x, checkpoint)
+            );
+
+            match point_position {
+                None => eprintln!("Error"),
+                Some(position) => {
+                    eprintln!("{0}", position);
+                }
+            }
     }
 }
 
@@ -126,7 +145,7 @@ fn main() {
         );
     }
 
-    let TrackInfo: Track = Track::new(
+    let mut TrackInfo: Track = Track::new(
         checkpoints,
         laps,
         checkpoint_count,
@@ -196,6 +215,8 @@ fn main() {
             let mut pod: Pod = my_pods[i];
             let next: CheckPoint = TrackInfo.pointById(pod.next_checkpoint_id);
             let mut str_boost: &str = "BOOST";
+
+            TrackInfo.lapByPoint(next);
 
             eprintln!(
                 "My: x: {0}, y: {1}, boost: {2}",
