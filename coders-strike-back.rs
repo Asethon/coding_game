@@ -11,19 +11,59 @@ pub struct Pod {
     vx: i32,
     vy: i32,
     angle: i32,
-    pub next_checkpoint_id: usize,
-    pub laps: i32,
+    next_checkpoint_id: usize,
+    thrust: i32,
 }
 
-fn build_pod (x: i32, y: i32, vx: i32, vy: i32, angle: i32, next_checkpoint_id: usize, laps: i32) -> Pod {
-    Pod {
-        x,
-        y,
-        vx,
-        vy,
-        angle,
-        next_checkpoint_id,
-        laps,
+impl Pod {
+    fn new(
+            x: i32,
+            y: i32,
+            vx: i32,
+            vy: i32,
+            angle: i32,
+            next_checkpoint_id: usize,
+            thrust: i32,
+        ) -> Pod {
+        Pod {
+            x,
+            y,
+            vx,
+            vy,
+            angle,
+            next_checkpoint_id,
+            thrust,
+        }
+    }
+
+    fn update(
+        &mut self,
+        x: i32,
+        y: i32,
+        vx: i32,
+        vy: i32,
+        angle: i32,
+        next_checkpoint_id: usize
+    ) {
+        self.x = x;
+        self.y = y;
+        self.vx = vx;
+        self.vy = vy;
+        self.angle = angle;
+        self.next_checkpoint_id = next_checkpoint_id;
+    }
+
+    fn distance (&mut self, checkpoint: CheckPoint) -> i32 {
+        (
+            ((self.x - checkpoint.x) as f64).powi(2)
+            + ((self.y - checkpoint.y) as f64).powi(2)
+        ).sqrt() as i32
+    }
+
+
+    //Вычисляем скорость
+    fn thrust (&mut self) {
+
     }
 }
 
@@ -38,6 +78,21 @@ pub struct Track {
     checkpoints: Vec<CheckPoint>,
     laps: i32,
     checkpoint_count: usize,
+}
+
+impl Track {
+    fn new(checkpoints: Vec<CheckPoint>, laps: i32, checkpoint_count: usize) {
+        Track {
+            checkpoints,
+            laps,
+            checkpoint_count
+        }
+    }
+
+
+    fn pointById(&mut self, checkpoint_id: i32) -> CheckPoint {
+        self.checkpoints[checkpoint_id]
+    }
 }
 
 /**
@@ -71,13 +126,12 @@ fn main() {
         );
     }
 
-    let TrackInfo: Track = Track{
+    let TrackInfo: Track = Track::new(
         checkpoints,
         laps,
         checkpoint_count,
-    };
+    );
 
-    eprintln!("{:?}", TrackInfo.checkpoints);
 
     // game loop
     loop {
@@ -85,27 +139,25 @@ fn main() {
             let mut input_line = String::new();
             io::stdin().read_line(&mut input_line).unwrap();
             let inputs = input_line.split(" ").collect::<Vec<_>>();
-        
-            let mut pod = build_pod(
-                parse_input!(inputs[0], i32),
-                parse_input!(inputs[1], i32),
-                parse_input!(inputs[2], i32),
-                parse_input!(inputs[3], i32),
-                parse_input!(inputs[4], i32),
-                parse_input!(inputs[5], usize),
-                0,
-            );
-
-
-            eprintln!("Next: {0}", parse_input!(inputs[5], i32));
-
-            if (pod.next_checkpoint_id == 0) {
-                pod.laps = my_pods[i].laps as i32 + 1;
-            }
-
             if (my_pods.len() > 1) {
-                my_pods[i] = pod;
+                my_pods[i].update(
+                    parse_input!(inputs[0], i32),
+                    parse_input!(inputs[1], i32),
+                    parse_input!(inputs[2], i32),
+                    parse_input!(inputs[3], i32),
+                    parse_input!(inputs[4], i32),
+                    parse_input!(inputs[5], usize),
+                );
             } else {
+                let mut pod = Pod::new(
+                    parse_input!(inputs[0], i32),
+                    parse_input!(inputs[1], i32),
+                    parse_input!(inputs[2], i32),
+                    parse_input!(inputs[3], i32),
+                    parse_input!(inputs[4], i32),
+                    parse_input!(inputs[5], usize),
+                    100,
+                );
                 my_pods.push(pod);
             }
         }
@@ -114,35 +166,50 @@ fn main() {
             let mut input_line = String::new();
             io::stdin().read_line(&mut input_line).unwrap();
             let inputs = input_line.split(" ").collect::<Vec<_>>();
-            let mut pod = build_pod(
-                parse_input!(inputs[0], i32),
-                parse_input!(inputs[1], i32),
-                parse_input!(inputs[2], i32),
-                parse_input!(inputs[3], i32),
-                parse_input!(inputs[4], i32),
-                parse_input!(inputs[5], usize),
-                1,
-            );
+            if (enemy_pods.len() > 1) {
+                enemy_pods[i].update(
+                    parse_input!(inputs[0], i32),
+                    parse_input!(inputs[1], i32),
+                    parse_input!(inputs[2], i32),
+                    parse_input!(inputs[3], i32),
+                    parse_input!(inputs[4], i32),
+                    parse_input!(inputs[5], usize),
+                );
+            } else {
+                let mut pod = Pod::new(
+                    parse_input!(inputs[0], i32),
+                    parse_input!(inputs[1], i32),
+                    parse_input!(inputs[2], i32),
+                    parse_input!(inputs[3], i32),
+                    parse_input!(inputs[4], i32),
+                    parse_input!(inputs[5], usize),
+                    100,
+                );
+                enemy_pods.push(pod);
+            }
         }
 
         // Write an action using println!("message...");
         // To debug: eprintln!("Debug message...");
 
         for i in 0..my_pods.len() {
-            let pod: Pod = my_pods[i];
-            let next: CheckPoint = TrackInfo.checkpoints[pod.next_checkpoint_id];
-            let mut boost: i32 = 100;
-            if ((pod.x < next.x && pod.x + pod.vx + 400 >= next.x) || 
-                (pod.x > next.x && pod.x - pod.vx - 400 <= next.x)
-            ) {
-                boost = 0;
-            }
-            
+            let mut pod: Pod = my_pods[i];
+            let next: CheckPoint = TrackInfo.pointById(pod.next_checkpoint_id);
+            let mut str_boost: &str = "BOOST";
+
             eprintln!(
-                "x: {0}, y: {1}, next_id: {2}, laps: {3}",
-                pod.x, pod.y, pod.next_checkpoint_id, pod.laps
+                "My: x: {0}, y: {1}, boost: {2}",
+                pod.vx, pod.vy, str_boost
             );
-            println!("{0} {1} {2}", next.x, next.y, boost);
+            println!("{0} {1} {2}", next.x, next.y, str_boost);
+        }
+
+        for i in 0..enemy_pods.len() {
+            let pod: Pod = enemy_pods[i];
+            // eprintln!(
+            //     "Enemy: x: {0}, y: {1}, next_id: {2}",
+            //     pod.x, pod.y, pod.next_checkpoint_id
+            // );
         }
 
         // You have to output the target position
